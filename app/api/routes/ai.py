@@ -133,6 +133,8 @@ def ai_chat(
     db: Session = Depends(get_db),
     current_user: Users = Depends(oauth2.get_current_user),
 ):
+    if not request.prompt:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Request is empty")
     recent_calculations = db.query(Calculation).filter(Calculation.user_id == current_user.id).order_by(Calculation.created_at.desc()).limit(5).all()
     recent_calculations_data = [
     {

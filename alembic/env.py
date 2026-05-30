@@ -10,6 +10,8 @@ from app.models.room import Room
 from app.models.users import Users
 from app.models.ai_request_log import AIRequestLog
 from app.models.ai_chat import AIChat
+from app.models.material import Material
+from app.models.material_price import MaterialPrice
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

@@ -7,6 +7,7 @@ from app.schemas.calculation_result import (
     CalculationStep,
     CalculationAssumption,
     MaterialItem,
+    CalculationWarning,
 )
 
 
@@ -83,5 +84,50 @@ def calculate_strip_foundation_v2(data: StripFoundationInput) -> CalculationResu
                 source="user_input",
             ),
         ],
-        warnings=[],
+        warnings=_build_strip_foundation_warnings(data, concrete_volume),
     )
+
+
+def _build_strip_foundation_warnings(
+    data: StripFoundationInput,
+    concrete_volume: float,
+) -> list[CalculationWarning]:
+    warnings: list[CalculationWarning] = []
+
+    if data.reserve_percent > 30:
+        warnings.append(
+            CalculationWarning(
+                code="high_reserve_percent",
+                message="Reserve percentage is above 30%, which may indicate a conservative estimate.",
+                severity="info",
+            )
+        )
+
+    if data.foundation_width > min(data.length, data.width) / 2:
+        warnings.append(
+            CalculationWarning(
+                code="large_foundation_width",
+                message="Foundation width is large relative to the room dimensions.",
+                severity="warning",
+            )
+        )
+
+    if data.foundation_depth > min(data.length, data.width) / 2:
+        warnings.append(
+            CalculationWarning(
+                code="large_foundation_depth",
+                message="Foundation depth is large relative to the room dimensions.",
+                severity="warning",
+            )
+        )
+
+    if concrete_volume == 0:
+        warnings.append(
+            CalculationWarning(
+                code="zero_volume",
+                message="Calculated concrete volume is zero; check input dimensions.",
+                severity="error",
+            )
+        )
+
+    return warnings
