@@ -34,6 +34,7 @@
 
 - `POST /foundation/strip` — strip foundation v1
 - `POST /foundation/strip/v2` — strip foundation v2
+- `POST /foundation/slab/v2` — slab foundation v2
 
 ### AI
 
@@ -62,4 +63,3 @@ Future modules will add endpoints under:
 - `/materials/*`
 - `/estimates/*`
 - `/projects/*`
-

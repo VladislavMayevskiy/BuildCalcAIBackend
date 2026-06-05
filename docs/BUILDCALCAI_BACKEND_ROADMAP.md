@@ -19,12 +19,13 @@ repair-ai-backend/
 │   ├── script.py.mako        # Migration script template
 │   └── versions/             # Sequential PostgreSQL migrations
 ├── app/
-│   ├── main.py               # FastAPI app, routers, Base.metadata.create_all
+│   ├── main.py               # FastAPI app, router registration
 │   ├── config.py             # Pydantic Settings from environment / .env
 │   ├── database.py           # SQLAlchemy engine, SessionLocal, get_db
 │   ├── oauth2.py             # JWT create/verify; get_current_user dependency
-│   ├── models/               # SQLAlchemy ORM models (users, rooms, calculations, ai_request_logs)
-│   ├── routes/               # FastAPI routers (calculation, auth, user, room, ai)
+│   ├── models/               # SQLAlchemy ORM models (users, rooms, calculations, AI logs, early materials/projects)
+│   ├── api/routes/           # Canonical FastAPI routers
+│   ├── routes/               # Compatibility router shims
 │   ├── schemas/              # Pydantic request/response models
 │   ├── services/             # Business logic (room calc, OpenAI, prompts, strip foundation stub)
 │   └── utils/utils.py       # bcrypt hash / verify helpers
@@ -35,16 +36,16 @@ repair-ai-backend/
 
 | Area | Purpose |
 |------|---------|
-| **app/main.py** | Application entry: registers routers for calculation, auth, users, rooms, AI; calls `Base.metadata.create_all(bind=engine)` on startup. |
+| **app/main.py** | Application entry: registers routers from `app/api/routes/` for calculations, auth, users, rooms, foundation, and AI. |
 | **app/config.py** | Loads DB credentials, JWT settings, and `openai_api_key` via `pydantic-settings` (`BaseSettings`, `.env`). |
 | **app/database.py** | PostgreSQL connection string, `create_engine`, `sessionmaker`, `get_db` generator, declarative `Base`. |
-| **app/models/** | Persistence: `Users`, `Room`, `Calculation`, `AIRequestLog`. |
-| **app/routes/** | HTTP API surface grouped by concern. |
-| **app/schemas/** | API and service I/O typing (`CalculationInput`/`CalculationResponse`, room/user/AI schemas, `StripFoundation*` stubs). |
-| **app/services/** | Deterministic calculators (`calculation_service`, `StripFoundation`) and AI helpers (`openai_service`, `ai_prompt_service`). |
+| **app/models/** | Persistence: `Users`, `Room`, `Calculation`, `AIRequestLog`, AI chat, and early project/material models. |
+| **app/api/routes/** | Canonical HTTP API surface grouped by concern. |
+| **app/schemas/** | API and service I/O typing (`CalculationInput`/`CalculationResponse`, `CalculationResult`, room/user/AI/foundation/estimate schemas). |
+| **app/services/** | Deterministic calculators, basic estimate generation, and AI helpers. |
 | **app/utils/** | Password hashing with passlib bcrypt. |
 | **alembic/** | Schema migrations for users, rooms, calculations, hashed_password column, room dimensions fields, `ai_request_logs`. |
-| **tests/** | Unit tests targeting `calculate_room` only (partial coverage). |
+| **tests/** | Unit tests for room, foundation, AI chat basics; integration tests are still planned. |
 
 **Note:** There is no `pyproject.toml`, `poetry.lock`, or `uv.lock` in this repository; dependency management is via `requirements.txt` only.
 
@@ -57,22 +58,28 @@ repair-ai-backend/
 | Method / path | Auth | Module | Behavior |
 |---------------|------|--------|----------|
 | `GET /` | No | `app/main.py` | Health-style message `{"message": "API is running"}`. |
-| `POST /login` | No | `app/routes/auth.py` | OAuth2 password form; returns JWT bearer token via `oauth2.create_acces_token`. |
-| `POST /users/` | No | `app/routes/user.py` | Registers user (email, name, hashed password); `UserResponse` (note: duplicate-email check logic is buggy—see risks). |
-| `GET /calculations/history` | Bearer | `app/routes/calculation.py` | Lists `Calculation` rows for current user. |
-| `POST /calculate` | Bearer | `app/routes/calculation.py` | Validates openings vs wall area; runs `calculate_room`; persists calculation JSON. |
-| `POST /rooms/` | Bearer | `app/routes/room.py` | Creates `Room`. |
-| `GET /rooms/` | Bearer | `app/routes/room.py` | Lists user rooms. |
-| `GET /rooms/{room_id}` | Bearer | `app/routes/room.py` | Single room. |
-| `PATCH /rooms/{room_id}` | Bearer | `app/routes/room.py` | Partial update. |
-| `DELETE /rooms/{room_id}` | Bearer | `app/routes/room.py` | Delete room (204). |
-| `POST /rooms/{room_id}/calculate` | Bearer | `app/routes/room.py` | Builds `CalculationInput` from room; `calculate_room`; saves with `room_project_id`. |
-| `GET /rooms/{room_id}/calculations` | Bearer | `app/routes/room.py` | Calculations filtered by room. |
-| `POST /ai/explain-calculation/{calculation_id}` | Bearer | `app/routes/ai.py` | Builds prompt from stored input/result; OpenAI explanation; writes `AIRequestLog`. |
-| `GET /ai/logs` | Bearer | `app/routes/ai.py` | User’s AI logs, newest first. |
-| `GET /ai/logs/{log_id}` | Bearer | `app/routes/ai.py` | Single log. |
+| `POST /login` | No | `app/api/routes/auth.py` | OAuth2 password form; returns JWT bearer token via `oauth2.create_acces_token`. |
+| `POST /users/` | No | `app/api/routes/users.py` | Registers user (email, name, hashed password); `UserResponse` (note: duplicate-email check logic is buggy—see risks). |
+| `GET /calculations/history` | Bearer | `app/api/routes/calculations.py` | Lists `Calculation` rows for current user. |
+| `POST /calculate` | Bearer | `app/api/routes/calculations.py` | Validates openings vs wall area; runs `calculate_room`; persists calculation JSON. |
+| `POST /calculate/v2` | Bearer | `app/api/routes/calculations.py` | Runs `calculate_room_v2`; persists `CalculationResult`. |
+| `POST /calculations/{calculation_id}/estimate` | Bearer | `app/api/routes/calculations.py` | Generates a basic estimate from a stored v2 calculation. |
+| `POST /rooms/` | Bearer | `app/api/routes/rooms.py` | Creates `Room`. |
+| `GET /rooms/` | Bearer | `app/api/routes/rooms.py` | Lists user rooms. |
+| `GET /rooms/{room_id}` | Bearer | `app/api/routes/rooms.py` | Single room. |
+| `PATCH /rooms/{room_id}` | Bearer | `app/api/routes/rooms.py` | Partial update. |
+| `DELETE /rooms/{room_id}` | Bearer | `app/api/routes/rooms.py` | Delete room (204). |
+| `POST /rooms/{room_id}/calculate` | Bearer | `app/api/routes/rooms.py` | Builds `CalculationInput` from room; `calculate_room`; saves with `room_project_id`. |
+| `GET /rooms/{room_id}/calculations` | Bearer | `app/api/routes/rooms.py` | Calculations filtered by room. |
+| `POST /foundation/strip` | Bearer | `app/api/routes/foundation.py` | Strip foundation v1; persists calculation history. |
+| `POST /foundation/strip/v2` | Bearer | `app/api/routes/foundation.py` | Strip foundation v2; returns `CalculationResult`. |
+| `POST /foundation/slab/v2` | Bearer | `app/api/routes/foundation.py` | Slab foundation v2; returns `CalculationResult`. |
+| `POST /ai/explain-calculation/{calculation_id}` | Bearer | `app/api/routes/ai.py` | Builds prompt from stored input/result; OpenAI explanation; writes `AIRequestLog`. |
+| `GET /ai/logs` | Bearer | `app/api/routes/ai.py` | User’s AI logs, newest first. |
+| `GET /ai/logs/{log_id}` | Bearer | `app/api/routes/ai.py` | Single log. |
+| `POST /ai/chat` | Bearer | `app/api/routes/ai.py` | General AI chat; logs request and response. |
 
-There is **no HTTP route** for strip foundation calculation; `calculate_strip_foundation` exists only as a Python function.
+Foundation routes are exposed through `app/api/routes/foundation.py`; older `app/routes/*` modules remain compatibility shims only.
 
 **Production readiness:** Routing is straightforward and uses dependency injection for DB and user. Improvements: consistent error models, OpenAPI tagging/prefix conventions, rate limits, request IDs, and fixing the user registration query bug.
 
@@ -84,11 +91,16 @@ There is **no HTTP route** for strip foundation calculation; `calculate_strip_fo
    - **Validation:** Openings cannot exceed perimeter×height (`ValueError` in service; HTTP 400 in route).
    - **Assessment:** Deterministic and simple; formulas are fixed assumptions (e.g. 9 m²/L paint coverage, 10% reserves). Not production-ready for diverse real-world specs without documented assumptions/warnings and configurable norms.
 
-2. **`app/services/StripFoundation.py`** — Strip foundation concrete volume:
+2. **`app/services/strip_foundation_service.py`** — Strip foundation concrete volume:
    - Inputs: outer `length`, `width`, `foundation_width`, `foundation_depth`, `reserve_percent` (default 10).
    - Output: perimeter, raw volume, volume with reserve.
-   - **Not exposed via API.** Schemas exist in `app/schemas/StripFoundation.py` with minimal Field validation (`length`/`width`/`foundation_width`/`foundation_depth` lack `gt=0` in schema).
-   - **Assessment:** Early stub; integrate route + validation + tests when prioritizing foundations.
+   - Exposed via `POST /foundation/strip` and `POST /foundation/strip/v2`.
+   - v2 returns `CalculationResult` with steps, concrete material, assumptions, and warnings.
+
+3. **`app/services/slab_foundation_service.py`** — Slab foundation concrete volume:
+   - Inputs: `length`, `width`, `slab_thickness`, `reserve_percent`.
+   - Exposed via `POST /foundation/slab/v2`.
+   - Returns `CalculationResult` with steps, concrete material, assumptions, and warnings.
 
 ### Schemas (`app/schemas/`)
 
@@ -97,14 +109,16 @@ There is **no HTTP route** for strip foundation calculation; `calculate_strip_fo
 - **`User.py`:** `UserCreate`, `UserResponse`.
 - **`ai.py`:** `AIExplanationResponse`, `AIRequestLogResponse`.
 - **`token.py`:** `TokenData` for JWT payload decoding.
-- **`StripFoundation.py`:** input/output models for unfinished foundation feature.
+- **`strip_foundation.py`:** input/output models for strip foundation.
+- **`slab_foundation.py`:** input model for slab foundation.
+- **`estimate.py`:** basic estimate response models built from `CalculationResult.materials`.
 
 ### Database and migrations
 
 - **Engine:** PostgreSQL via `psycopg2-binary` connection string (`app/database.py`).
 - **ORM:** SQLAlchemy 2.x declarative models.
 - **Alembic:** Present; linear chain `929fadc57d61 → 2db5b4d0398c → 7d50aebd5c20 → e09463912808` creates/extends users, rooms, calculations, adds `hashed_password`, room dimension columns, `ai_request_logs`.
-- **Startup:** `main.py` also runs `Base.metadata.create_all(bind=engine)`, which can **overlap or conflict** with Alembic if models diverge—operational risk.
+- **Startup:** current `main.py` registers routers only; Alembic remains the intended schema-management path.
 - **Production readiness:** Migrations exist; dual schema management (`create_all` + Alembic) should be unified. No explicit transaction wrappers around multi-step writes beyond default session commit patterns.
 
 ### AI integration
@@ -134,7 +148,7 @@ There is **no HTTP route** for strip foundation calculation; `calculate_strip_fo
 
 - **`tests/test_calculation_service.py`:** Asserts floor/ceiling areas for one scenario.
 - **`tests/test_calculation_service_perimeter.py`:** Asserts `wall_area` for one scenario.
-- **Missing:** Routes (integration), AI (mocked), auth, room CRUD, `StripFoundation`, edge cases for openings, Alembic upgrade smoke tests.
+- **Missing:** Route integration tests, AI tests with mocked OpenAI calls, auth tests, room CRUD tests, estimate route tests, edge cases for openings, Alembic upgrade smoke tests.
 
 **Assessment:** Minimal unit coverage; not sufficient for regression safety before production changes.
 
@@ -474,15 +488,16 @@ Existing **`AIRequestLog`** already stores prompt, raw response/error, status, u
 | Entity | Purpose |
 |--------|---------|
 | **User** | Auth identity, billing tier (future), preferences. *(Exists as `Users`.)* |
-| **Project** | Groups rooms/buildings/calcs for one job. *(Not present.)* |
+| **Project** | Groups rooms/buildings/calcs for one job. *(Skeleton model present; workflow not complete.)* |
 | **Room** | Saved geometry for repeat calcs. *(Exists.)* |
 | **Building** | Multi-zone envelope for roof/facade aggregates. *(Not present.)* |
 | **Calculation** | Persisted deterministic run snapshot. *(Exists.)* |
 | **CalculationStep** | Normalize steps for analytics (optional normalization vs JSON blob today). *(Not present.)* |
-| **Material** | Canonical material catalog rows. *(Not present.)* |
-| **MaterialItem** | Resolved line items referencing catalog + quantity. *(Not present.)* |
-| **Estimate** | Aggregate financial/scope document. *(Not present.)* |
-| **EstimateItem** | Rows in estimate referencing materials/calcs. *(Not present.)* |
+| **Material** | Canonical material catalog rows. *(Skeleton model present.)* |
+| **MaterialPrice** | Material price rows for future catalog pricing. *(Skeleton model present.)* |
+| **MaterialItem** | Resolved line items referencing catalog + quantity. *(Present as schema item inside `CalculationResult`, not normalized in DB.)* |
+| **Estimate** | Aggregate financial/scope document. *(Schema/service started; persisted entity not present.)* |
+| **EstimateItem** | Rows in estimate referencing materials/calcs. *(Schema-level item exists; persisted entity not present.)* |
 | **AIRequestLog** | Audit AI calls *(exists)*; extend for tokens/cost/prompt_versions. |
 | **PromptVersion** | Track hashes and rollout of prompt templates. *(Not present.)* |
 | **KnowledgeDocument** | Source files for RAG. *(Not present.)* |
@@ -521,7 +536,7 @@ Existing **`AIRequestLog`** already stores prompt, raw response/error, status, u
 - [ ] Add intent detection  
 - [ ] Add entity extraction  
 - [ ] Add `ToolRouter`  
-- [ ] Add foundation calculators (API + validation + tests)  
+- [ ] Expand foundation calculators beyond strip/slab (pile, rebar, formwork) with API + validation + tests  
 - [ ] Add wall calculators  
 - [ ] Add floor calculators  
 - [ ] Add roofing calculators  
@@ -541,18 +556,18 @@ Issues below are grounded in repository inspection.
    - **Risk:** SQLAlchemy column comparison semantics are wrong intended filter; duplicates may slip through or query misbehaves depending on dialect.  
    - **Fix:** `filter(Users.email == user.email)`.
 
-2. **`app/main.py` — `Base.metadata.create_all`**  
-   - **Risk:** Duplicate or divergent DDL vs Alembic; accidental schema drift across environments.  
-   - **Fix:** Use migrations only for production-like environments; keep `create_all` only for ephemeral dev if documented.
+2. **Alembic/model drift risk**  
+   - **Risk:** New skeleton models and migrations can diverge if models are added without migration checks.  
+   - **Fix:** Treat Alembic as the schema authority and add migration smoke checks before production-like deploys.
 
 3. **`Room` model vs `RoomCreate`**  
    - **Where:** DB column `rooms.room_type` is `nullable=False`; schema allows optional `None`.  
    - **Risk:** INSERT failure at DB if client omits room type—400 may be SQLite/Postgres constraint error surfaced poorly.  
    - **Align:** Defaults in DB/schema or require field in API.
 
-4. **`StripFoundation` calculator not wired**  
-   - **Risk:** Dead code confusion; testers cannot validate via HTTP.  
-   - **Fix:** Add route behind auth + validators + tests when scope allows.
+4. **Foundation API lacks integration tests**  
+   - **Risk:** Strip/slab services can pass unit tests while route persistence, auth dependencies, or response models regress.  
+   - **Fix:** Add focused integration tests for `/foundation/strip/v2` and `/foundation/slab/v2`.
 
 5. **`sentry-sdk` unused**  
    - **Risk:** Operational blindness to 5xx in production; dependency weight without benefit.  
