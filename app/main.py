@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from app.api.routes import ai, auth, calculations, foundation, rooms, users
+from app.api.routes.bars_calculation import index
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -29,3 +30,4 @@ app.include_router(users.router)
 app.include_router(rooms.router)
 app.include_router(ai.router)
 app.include_router(foundation.router)
+app.include_router(index.router)

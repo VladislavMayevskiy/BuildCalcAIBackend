@@ -27,6 +27,9 @@ BuildCalcAi має стати системою, яка підтримує пов
 - Room calculation v2: `POST /calculate/v2`
 - Strip foundation v1: `POST /foundation/strip`
 - Strip foundation v2: `POST /foundation/strip/v2`
+- Slab foundation v2: `POST /foundation/slab/v2`
+- Basic estimate generation from stored v2 calculations
+- Skeletal `Project`, `Material`, and `MaterialPrice` models
 - AI explanation: `POST /ai/explain-calculation/{calculation_id}`
 - AI request logs: `GET /ai/logs`, `GET /ai/logs/{log_id}`
 - AI chat routes: `POST /ai/chat`, `GET /ai/chat/logs`, `GET /ai/chat/logs/{log_id}`
@@ -36,9 +39,10 @@ BuildCalcAi має стати системою, яка підтримує пов
 - AI chat реалізований у коді, але prompt і проєктна контекстуалізація потребують допрацювання
 - `CalculationResult` існує як стандартна структура, але ще не заповнений універсально для всіх модулів
 - strip foundation модуль розпочатий, але не має повної дорожньої карти для фундаментного блоку
+- estimate/material/project частини початі як базові моделі/сервіс, але ще не є повним workflow
 
 ### Planned
-- Додати slab foundation, pile foundation, concrete/rebar/formwork модулі
+- Додати pile foundation, concrete/rebar/formwork модулі
 - Створити матеріальний каталог, систему цін та генератор кошторисів
 - Впровадити проектний workflow з `Project` та агрегованими етапами
 - Додати структуровані AI-відповіді та prompt control
@@ -118,6 +122,8 @@ They contain only docstrings/TODOs and **no business logic** yet.
 | POST | `/calculate/v2` | Yes | Room calc v2 | `CalculationResult` |
 | POST | `/foundation/strip` | Yes | Strip foundation v1 | `StripFoundationResponse` |
 | POST | `/foundation/strip/v2` | Yes | Strip foundation v2 | `CalculationResult` |
+| POST | `/foundation/slab/v2` | Yes | Slab foundation v2 | `CalculationResult` |
+| POST | `/calculations/{calculation_id}/estimate` | Yes | Generate basic estimate from stored v2 calculation | `EstimateResult` |
 | POST | `/ai/explain-calculation/{calculation_id}` | Yes | AI explain calculation | `AIExplanationResponse` |
 | GET | `/ai/logs` | Yes | AI explain logs | `list[AIRequestLogResponse]` |
 | GET | `/ai/logs/{log_id}` | Yes | AI explain log detail | `AIRequestLogResponse` |
@@ -217,8 +223,13 @@ They contain only docstrings/TODOs and **no business logic** yet.
 - `app/models/ai_chat.py`
 - Логи AI чату
 
+### Почато, але ще не завершено
+- `Project` model існує як skeleton, але ще не є повним project workflow
+- `Material` і `MaterialPrice` models існують як skeleton для майбутнього каталогу/цін
+- `EstimateResult` schema і базовий estimate service існують, але без реальних цін і без persisted estimate entity
+
 ### Немає зараз
-- `Project`, `Estimate`, `Material`, `MaterialCategory`, `MaterialPrice`, `Supplier`, `PriceSource`, `PromptVersion`
+- `Estimate`, `EstimateItem`, `MaterialCategory`, `Supplier`, `PriceSource`, `PromptVersion`
 - RAG / embeddings / семантичний пошук
 
 ## 8. Current Tests
@@ -249,7 +260,7 @@ BuildCalcAi має добру технічну основу, але ще не є
 
 ### Має бути зроблено
 - strip foundation модуль розпочато, але неповний
-- немає slab foundation, pile foundation, rebar, formwork
+- slab foundation v2 вже є; немає pile foundation, rebar, formwork
 - немає фасадних, внутрішніх, дахових модулів
 - немає матеріального каталогу та цінової системи
 - немає агрегованого кошторису
@@ -625,13 +636,13 @@ app/domain/projects/
 - [ ] Finish `POST /ai/chat` prompt і project-aware поведінку
 - [ ] Add AI chat tests
 - [ ] Complete strip foundation v2 edge cases and warnings
-- [ ] Add slab foundation v2 module and tests
+- [ ] Add foundation route integration tests for strip/slab v2
 - [ ] Add rebar calculator module and tests
 - [ ] Add formwork calculator module and tests
 - [ ] Add facade area/insulation calculators
-- [ ] Define material catalog models and price schema
-- [ ] Add `EstimateResult` schema
-- [ ] Add generator from `CalculationResult.materials`
+- [ ] Expand material catalog models and price schema
+- [ ] Expand `EstimateResult` with real price support
+- [ ] Harden generator from `CalculationResult.materials`
 - [ ] Add local price support
 
 ## 18. AI Roadmap Connected to Product
@@ -739,11 +750,11 @@ app/domain/projects/
 - [ ] Finish `/ai/chat` prompt and project-aware behavior
 - [ ] Add AI chat integration tests
 - [ ] Complete strip foundation v2 edge cases and warnings
-- [ ] Add slab foundation v2 module and tests
+- [ ] Add foundation route integration tests for strip/slab v2
 - [ ] Add rebar calculator module and tests
 - [ ] Add formwork calculator module and tests
 - [ ] Add facade area/insulation calculators
-- [ ] Define material catalog models and price schema
-- [ ] Add `EstimateResult` schema
-- [ ] Add generator from `CalculationResult.materials`
+- [ ] Expand material catalog models and price schema
+- [ ] Expand `EstimateResult` with real price support
+- [ ] Harden generator from `CalculationResult.materials`
 - [ ] Add local price support

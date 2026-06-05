@@ -28,4 +28,12 @@ Working calculators currently live in `app/services/`:
 
 - room calculation v1/v2
 - strip foundation v1/v2
+- slab foundation v2
 
+## Started supporting modules
+
+The repository also contains early estimate/material/project code, but these areas are not yet complete product workflows:
+
+- estimate generation from a stored v2 `CalculationResult`
+- skeletal material and material price models
+- skeletal project model
