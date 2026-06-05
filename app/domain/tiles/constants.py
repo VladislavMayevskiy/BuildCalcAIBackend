@@ -1,0 +1,2 @@
+"""Future tiles constants (planned)."""
+

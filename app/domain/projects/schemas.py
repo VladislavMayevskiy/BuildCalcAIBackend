@@ -1,0 +1,2 @@
+"""Future projects schemas (planned)."""
+

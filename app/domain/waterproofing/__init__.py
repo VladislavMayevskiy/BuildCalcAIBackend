@@ -1,0 +1,2 @@
+"""Waterproofing domain module (planned)."""
+

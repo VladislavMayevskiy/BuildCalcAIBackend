@@ -1,0 +1,2 @@
+"""Future waterproofing constants (planned)."""
+

@@ -1,0 +1,2 @@
+"""Future facade constants (planned)."""
+

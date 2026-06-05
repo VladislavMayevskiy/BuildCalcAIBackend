@@ -1,10 +1,31 @@
 from fastapi import FastAPI
-from app.routes import calculation
+from app.api.routes import ai, auth, calculations, foundation, rooms, users
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
 
 @app.get("/")
 def root():
     return {"message": "API is running"}
 
-app.include_router(calculation.router)
+
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(calculations.router)
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(rooms.router)
+app.include_router(ai.router)
+app.include_router(foundation.router)

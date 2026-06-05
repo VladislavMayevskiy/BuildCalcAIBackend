@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     database_username: str
     secret_key: str
     algorithm: str
-    acces_token_expire_minutes: int
+    access_token_expire_minutes: int
+    openai_api_key: str
 
     class Config:
         env_file = ".env"

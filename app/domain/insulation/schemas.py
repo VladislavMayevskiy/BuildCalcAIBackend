@@ -1,0 +1,2 @@
+"""Future insulation schemas (planned)."""
+

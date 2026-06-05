@@ -1,0 +1,2 @@
+"""Foundation domain module (planned)."""
+

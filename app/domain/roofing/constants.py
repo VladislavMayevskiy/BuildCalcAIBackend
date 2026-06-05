@@ -1,0 +1,2 @@
+"""Future roofing constants (planned)."""
+

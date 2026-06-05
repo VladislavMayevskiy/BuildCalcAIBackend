@@ -1,0 +1,2 @@
+"""Concrete domain module (planned)."""
+

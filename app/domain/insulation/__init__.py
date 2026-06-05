@@ -1,0 +1,2 @@
+"""Insulation domain module (planned)."""
+

@@ -1,0 +1,2 @@
+"""Facade domain module (planned)."""
+
