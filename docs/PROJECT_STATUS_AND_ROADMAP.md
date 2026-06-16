@@ -23,28 +23,33 @@ BuildCalcAi має стати системою, яка підтримує пов
 - JWT-аутентифікація: `/login`, `/users/`
 - Користувачі, кімнати, історія розрахунків
 - Room CRUD: створення, отримання, оновлення, видалення
-- Room calculation v1: `POST /calculate`
-- Room calculation v2: `POST /calculate/v2`
-- Strip foundation v1: `POST /foundation/strip`
-- Strip foundation v2: `POST /foundation/strip/v2`
-- Slab foundation v2: `POST /foundation/slab/v2`
-- Basic estimate generation from stored v2 calculations
+- Room calculation v1/v2
+- **Earthworks v2**: excavation, trench, backfill (`/earthworks/*`)
+- **Foundation v2**: strip v1/v2, slab v2, formwork, pile, cushion, waterproofing, insulation (`/foundation/*`)
+- **Concrete v2**: volume by shape, approximate mix materials (`/concrete/*`)
+- **Rebar v2**: linear, mesh, stirrups, lap-length (`/rebar/*`)
+- **Walls v2**: blocks, bricks, mortar (`/walls/*`)
+- **Facade v2**: area, insulation, plaster, paint (`/facade/*`)
+- **Floors v2**: screed, insulation, laminate (`/floors/*`)
+- **Tiles v2**: floor, wall, adhesive, grout (`/tiles/*`)
+- **Roofing v2**: area, covering, membrane, insulation, gutters (`/roof/*`)
+- **MEP basic v2** (preliminary, not certified design): heat-loss, electrical load, pipe volume (`/mep/*`)
+- **Estimates**: basic estimate from stored v2 calculation + deterministic material aggregation (`/estimates/*`)
+- **Work catalog** (static, no AI/DB): work types, subtypes, calculation templates, standards, method/QC/safety
 - Skeletal `Project`, `Material`, and `MaterialPrice` models
 - AI explanation: `POST /ai/explain-calculation/{calculation_id}`
 - AI request logs: `GET /ai/logs`, `GET /ai/logs/{log_id}`
-- AI chat routes: `POST /ai/chat`, `GET /ai/chat/logs`, `GET /ai/chat/logs/{log_id}`
-- `CalculationResult` як стандартна ціль для v2-розрахунків
+- AI chat routes (project-aware prompt; explains, does not calculate): `POST /ai/chat`, `GET /ai/chat/logs`, `GET /ai/chat/logs/{log_id}`
+- `CalculationResult` як стандартна ціль для всіх v2-розрахунків
 
 ### In Progress
-- AI chat реалізований у коді, але prompt і проєктна контекстуалізація потребують допрацювання
-- `CalculationResult` існує як стандартна структура, але ще не заповнений універсально для всіх модулів
-- strip foundation модуль розпочатий, але не має повної дорожньої карти для фундаментного блоку
-- estimate/material/project частини початі як базові моделі/сервіс, але ще не є повним workflow
+- estimate/material/project частини: агрегація матеріалів є, але каталог реальних цін і проектний workflow ще не завершені
+- `app/domain/*` залишаються плейсхолдерами (working-код досі в `app/services/`)
 
 ### Planned
-- Додати pile foundation, concrete/rebar/formwork модулі
-- Створити матеріальний каталог, систему цін та генератор кошторисів
+- Створити матеріальний каталог, систему цін та повний генератор кошторисів
 - Впровадити проектний workflow з `Project` та агрегованими етапами
+- Додати інтерʼєрні finishing-калькулятори (putty/primer/wallpaper/drywall)
 - Додати структуровані AI-відповіді та prompt control
 - Зробити інтернет-пошук цін лише як майбутню опцію
 
@@ -123,7 +128,52 @@ They contain only docstrings/TODOs and **no business logic** yet.
 | POST | `/foundation/strip` | Yes | Strip foundation v1 | `StripFoundationResponse` |
 | POST | `/foundation/strip/v2` | Yes | Strip foundation v2 | `CalculationResult` |
 | POST | `/foundation/slab/v2` | Yes | Slab foundation v2 | `CalculationResult` |
+| POST | `/foundation/formwork/v2` | Yes | Foundation formwork | `CalculationResult` |
+| POST | `/foundation/pile/v2` | Yes | Pile foundation | `CalculationResult` |
+| POST | `/foundation/cushion/v2` | Yes | Sand/gravel cushion | `CalculationResult` |
+| POST | `/foundation/waterproofing/v2` | Yes | Foundation waterproofing | `CalculationResult` |
+| POST | `/foundation/insulation/v2` | Yes | Foundation insulation | `CalculationResult` |
+| POST | `/earthworks/excavation/v2` | Yes | Excavation | `CalculationResult` |
+| POST | `/earthworks/trench/v2` | Yes | Trench | `CalculationResult` |
+| POST | `/earthworks/backfill/v2` | Yes | Backfill | `CalculationResult` |
+| POST | `/concrete/volume/v2` | Yes | Concrete volume by shape | `CalculationResult` |
+| POST | `/concrete/mix-materials/v2` | Yes | Concrete mix materials (approx.) | `CalculationResult` |
+| POST | `/rebar/linear/v2` | Yes | Linear rebar | `CalculationResult` |
+| POST | `/rebar/mesh/v2` | Yes | Rebar mesh | `CalculationResult` |
+| POST | `/rebar/stirrups/v2` | Yes | Rebar stirrups | `CalculationResult` |
+| POST | `/rebar/lap-length/v2` | Yes | Rebar lap length | `CalculationResult` |
+| POST | `/walls/blocks/v2` | Yes | Block walls | `CalculationResult` |
+| POST | `/walls/bricks/v2` | Yes | Brick walls | `CalculationResult` |
+| POST | `/walls/mortar/v2` | Yes | Masonry mortar | `CalculationResult` |
+| POST | `/facade/area/v2` | Yes | Facade area | `CalculationResult` |
+| POST | `/facade/insulation/v2` | Yes | Facade insulation | `CalculationResult` |
+| POST | `/facade/plaster/v2` | Yes | Facade plaster | `CalculationResult` |
+| POST | `/facade/paint/v2` | Yes | Facade paint | `CalculationResult` |
+| POST | `/floors/screed/v2` | Yes | Floor screed | `CalculationResult` |
+| POST | `/floors/insulation/v2` | Yes | Floor insulation | `CalculationResult` |
+| POST | `/floors/laminate/v2` | Yes | Laminate flooring | `CalculationResult` |
+| POST | `/tiles/floor/v2` | Yes | Floor tiles | `CalculationResult` |
+| POST | `/tiles/wall/v2` | Yes | Wall tiles | `CalculationResult` |
+| POST | `/tiles/adhesive/v2` | Yes | Tile adhesive | `CalculationResult` |
+| POST | `/tiles/grout/v2` | Yes | Tile grout | `CalculationResult` |
+| POST | `/roof/area/v2` | Yes | Roof area | `CalculationResult` |
+| POST | `/roof/covering/v2` | Yes | Roof covering | `CalculationResult` |
+| POST | `/roof/membrane/v2` | Yes | Roof membrane | `CalculationResult` |
+| POST | `/roof/insulation/v2` | Yes | Roof insulation | `CalculationResult` |
+| POST | `/roof/gutters/v2` | Yes | Roof gutters | `CalculationResult` |
+| POST | `/mep/hvac/heat-loss-basic/v2` | Yes | Basic heat loss (preliminary) | `CalculationResult` |
+| POST | `/mep/electrical/load-basic/v2` | Yes | Basic electrical load (preliminary) | `CalculationResult` |
+| POST | `/mep/plumbing/pipe-volume/v2` | Yes | Pipe water volume | `CalculationResult` |
+| POST | `/estimates/aggregate-materials/v2` | Yes | Aggregate materials from submitted results | `MaterialAggregationResult` |
+| POST | `/estimates/from-calculations/v2` | Yes | Aggregate materials from stored calculations | `MaterialAggregationResult` |
 | POST | `/calculations/{calculation_id}/estimate` | Yes | Generate basic estimate from stored v2 calculation | `EstimateResult` |
+| GET | `/work-types`, `/work-types/{slug}` | No | Work taxonomy | `WorkType` |
+| GET | `/work-subtypes`, `/work-subtypes/{slug}` | No | Work subtypes | `WorkSubtype` |
+| GET | `/calculation-templates`, `/calculation-templates/{code}` | No | Calculation templates | `CalculationTemplate` |
+| GET | `/standards`, `/standards/{code}` | No | Standards references | `StandardReference` |
+| GET | `/method-statements/{slug}` | No | Method statement | `MethodStatement` |
+| GET | `/qc-checks/{slug}` | No | QC checks | `QCCheck` |
+| GET | `/safety-rules/{slug}` | No | Safety rules | `SafetyRule` |
 | POST | `/ai/explain-calculation/{calculation_id}` | Yes | AI explain calculation | `AIExplanationResponse` |
 | GET | `/ai/logs` | Yes | AI explain logs | `list[AIRequestLogResponse]` |
 | GET | `/ai/logs/{log_id}` | Yes | AI explain log detail | `AIRequestLogResponse` |
@@ -234,25 +284,24 @@ They contain only docstrings/TODOs and **no business logic** yet.
 
 ## 8. Current Tests
 
-### Існуючі
-- `tests/test_calculation_service.py`
-- `tests/test_calculation_service_perimeter.py`
-- `tests/test_calculation_service_v2.py`
-- `tests/test_strip_foundation_service.py`
+### Існуючі (`tests/unit/`)
+- Unit-тести для всіх калькуляторних сервісів: earthworks, foundation (+extra), concrete, rebar, walls, facade, floors, tiles, roofing, mep, room
+- `test_estimate_service.py` — агрегація матеріалів
+- `test_work_catalog_service.py` — статичний каталог
+- `test_ai_chat.py` — AI chat із mocked OpenAI (без реальних мережевих викликів)
+- Поточний прогін: `python -m pytest -q` → всі тести проходять (137+)
 
 ### Покриття
-- Основні калькулятори
-- `CalculationResult` структура
+- Форма `CalculationResult` (steps/materials/assumptions/warnings)
+- Коректність формул, граничні випадки, невалідні значення
+- Наявність assumptions і warnings
+- AI chat логування з mocked OpenAI
 
 ### Відсутні
-- API integration tests
+- API integration / route tests (HTTP рівень)
 - Auth tests
-- Room CRUD tests
-- Calculation history route tests
-- AI endpoint tests
-- OpenAI mocking tests
-- AI chat tests
-- Project/estimate tests
+- Room CRUD route tests
+- Project workflow tests
 
 ## 9. Current Gap
 
@@ -633,16 +682,17 @@ app/domain/projects/
 
 ## 17. Immediate Next Tasks
 
-- [ ] Finish `POST /ai/chat` prompt і project-aware поведінку
-- [ ] Add AI chat tests
-- [ ] Complete strip foundation v2 edge cases and warnings
-- [ ] Add foundation route integration tests for strip/slab v2
-- [ ] Add rebar calculator module and tests
-- [ ] Add formwork calculator module and tests
-- [ ] Add facade area/insulation calculators
+- [x] Finish `POST /ai/chat` prompt і project-aware поведінку
+- [x] Add AI chat tests (mocked OpenAI)
+- [x] Complete strip foundation v2 edge cases and warnings
+- [x] Add rebar calculator module and tests (linear, mesh, stirrups, lap-length)
+- [x] Add formwork calculator module and tests
+- [x] Add facade area/insulation calculators (+ plaster/paint)
+- [x] Add earthworks, concrete, walls, floors, tiles, roofing, MEP calculators and tests
+- [x] Harden generator from `CalculationResult.materials` (deterministic aggregation)
+- [ ] Add foundation route integration tests for strip/slab v2 (HTTP-level)
 - [ ] Expand material catalog models and price schema
 - [ ] Expand `EstimateResult` with real price support
-- [ ] Harden generator from `CalculationResult.materials`
 - [ ] Add local price support
 
 ## 18. AI Roadmap Connected to Product
@@ -747,14 +797,13 @@ app/domain/projects/
 
 ## 24. Immediate Next Tasks
 
-- [ ] Finish `/ai/chat` prompt and project-aware behavior
-- [ ] Add AI chat integration tests
-- [ ] Complete strip foundation v2 edge cases and warnings
-- [ ] Add foundation route integration tests for strip/slab v2
-- [ ] Add rebar calculator module and tests
-- [ ] Add formwork calculator module and tests
-- [ ] Add facade area/insulation calculators
+- [x] Finish `/ai/chat` prompt and project-aware behavior
+- [x] Add AI chat tests (mocked OpenAI)
+- [x] Complete strip foundation v2 edge cases and warnings
+- [x] Add rebar, formwork, earthworks, concrete, walls, facade, floors, tiles, roofing, MEP calculators and tests
+- [x] Add work-type/subtype/calculation-template catalog API (static)
+- [x] Harden generator from `CalculationResult.materials` (deterministic aggregation)
+- [ ] Add foundation route integration tests for strip/slab v2 (HTTP-level)
 - [ ] Expand material catalog models and price schema
 - [ ] Expand `EstimateResult` with real price support
-- [ ] Harden generator from `CalculationResult.materials`
 - [ ] Add local price support

@@ -4,12 +4,12 @@
 
 This repository is intentionally simple and keeps deterministic calculator logic separated from HTTP routes:
 
-- **Routes (`app/api/routes/`)**: HTTP layer only (auth dependencies, DB session, status codes). No formulas.
-- **Services (`app/services/`)**: deterministic calculation logic (room calculation v1/v2, strip foundation v1/v2) and AI helpers.
-- **Schemas (`app/schemas/`)**: Pydantic request/response models used by both routes and services.
-- **Models (`app/models/`)**: SQLAlchemy ORM entities (users, rooms, calculation history, AI logs).
+- **Routes (`app/api/routes/`)**: HTTP layer only (auth dependencies, DB session, status codes). No formulas. Routers per module: `earthworks`, `foundation`, `concrete`, `rebar`, `walls`, `facade`, `floors`, `tiles`, `roofing`, `mep`, `estimates`, `work_catalog`, plus rooms/calculations/auth/users/ai.
+- **Services (`app/services/`)**: deterministic calculation logic. Every v2 calculator returns a `CalculationResult` (`calculation_type`, `steps`, `materials`, `assumptions`, `warnings`); formulas live only here. Also hosts the static `work_catalog_service`, `estimate_service` (incl. material aggregation), and AI helpers. No AI/OpenAI inside calculators.
+- **Schemas (`app/schemas/`)**: Pydantic request/response models used by both routes and services. Inputs validate with `@model_validator(mode="after")`; the shared result contract is `calculation_result.py`.
+- **Models (`app/models/`)**: SQLAlchemy ORM entities (users, rooms, calculation history, AI logs). All v2 calculator routes persist a `Calculation` history row.
 - **DB wiring (`app/database.py`)**: SQLAlchemy engine/session and `get_db`.
-- **Security (`app/oauth2.py`)**: JWT helpers and `get_current_user`.
+- **Security (`app/oauth2.py`)**: JWT helpers and `get_current_user`. Calculator endpoints require auth; the static work-catalog `GET` endpoints are public reference data.
 
 ## Target direction: "House from 0 to 100"
 

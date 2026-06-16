@@ -60,6 +60,47 @@ def test_ai_chat_logs_response_and_commits():
     assert saved_log.error_message is None
 
 
+def test_ai_chat_logs_error_when_generation_fails():
+    user = SimpleNamespace(id=7)
+
+    query = MagicMock()
+    query.filter.return_value = query
+    query.order_by.return_value = query
+    query.limit.return_value = query
+    query.all.return_value = []
+
+    db = MagicMock()
+    db.query.return_value = query
+
+    with patch(
+        "app.api.routes.ai.generate_ai_response",
+        side_effect=RuntimeError("boom"),
+    ) as mocked_generate:
+        with pytest.raises(HTTPException) as exc_info:
+            ai_chat(request=AIRequest(prompt="hello?"), db=db, current_user=user)
+
+    assert exc_info.value.status_code == 503
+    mocked_generate.assert_called_once()
+    db.commit.assert_called_once()
+
+    saved_log = db.add.call_args.args[0]
+    assert saved_log.status == "error"
+    assert saved_log.response is None
+    assert saved_log.error_message == "boom"
+
+
+def test_build_ai_chat_prompt_includes_hard_constraints():
+    prompt = build_ai_chat_prompt(user_prompt="hi", user_calculations=[])
+
+    # No-arithmetic and no-invention rules must be present.
+    assert "Do not perform primary arithmetic" in prompt
+    assert "missing" in prompt.lower()
+    assert "Do not claim exact prices" in prompt
+    # Newly implemented endpoints should be advertised.
+    assert "/rebar/linear/v2" in prompt
+    assert "/foundation/formwork/v2" in prompt
+
+
 def test_build_ai_chat_prompt_summarizes_calculations():
     calculations = [
         {

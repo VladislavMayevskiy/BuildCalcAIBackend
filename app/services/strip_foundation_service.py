@@ -83,6 +83,16 @@ def calculate_strip_foundation_v2(data: StripFoundationInput) -> CalculationResu
                 description="Concrete reserve is based on input reserve_percent.",
                 source="user_input",
             ),
+            CalculationAssumption(
+                key="perimeter_method",
+                description="Perimeter uses outer plan dimensions: 2 * (length + width).",
+                source="standard_geometry",
+            ),
+            CalculationAssumption(
+                key="concrete_only",
+                description="Only concrete volume is computed; rebar and formwork are separate calculators.",
+                source="scope",
+            ),
         ],
         warnings=_build_strip_foundation_warnings(data, concrete_volume),
     )
@@ -118,6 +128,24 @@ def _build_strip_foundation_warnings(
                 code="large_foundation_depth",
                 message="Foundation depth is large relative to the room dimensions.",
                 severity="warning",
+            )
+        )
+
+    if data.foundation_width < 0.2:
+        warnings.append(
+            CalculationWarning(
+                code="thin_foundation_width",
+                message="Foundation width is below 0.2 m, which is unusually thin for a strip footing.",
+                severity="info",
+            )
+        )
+
+    if data.reserve_percent == 0:
+        warnings.append(
+            CalculationWarning(
+                code="no_reserve",
+                message="Reserve percentage is 0%; no allowance for spillage or over-excavation.",
+                severity="info",
             )
         )
 

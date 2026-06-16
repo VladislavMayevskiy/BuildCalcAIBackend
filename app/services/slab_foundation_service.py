@@ -33,6 +33,30 @@ def calculate_slab_foundation_v2(data: SlabFoundationInput) -> CalculationResult
                 severity="warning",
             )
         )
+    if data.slab_thickness < 0.1:
+        warnings.append(
+            CalculationWarning(
+                code="thin_slab_thickness",
+                message="Slab thickness is below 0.1 m, which is unusually thin for a foundation slab.",
+                severity="info",
+            )
+        )
+    if data.reserve_percent == 0:
+        warnings.append(
+            CalculationWarning(
+                code="no_reserve",
+                message="Reserve percentage is 0%; no allowance for spillage or over-excavation.",
+                severity="info",
+            )
+        )
+    if concrete_volume == 0:
+        warnings.append(
+            CalculationWarning(
+                code="zero_volume",
+                message="Calculated concrete volume is zero; check input dimensions.",
+                severity="error",
+            )
+        )
 
     return CalculationResult(
         calculation_type="slab_foundation",
@@ -81,6 +105,16 @@ def calculate_slab_foundation_v2(data: SlabFoundationInput) -> CalculationResult
                 key="reserve_percent",
                 description="Concrete reserve is based on input reserve_percent.",
                 source="user_input",
+            ),
+            CalculationAssumption(
+                key="slab_area_method",
+                description="Slab area uses plan dimensions: length * width.",
+                source="standard_geometry",
+            ),
+            CalculationAssumption(
+                key="concrete_only",
+                description="Only concrete volume is computed; rebar mesh and formwork are separate calculators.",
+                source="scope",
             ),
         ],
         warnings=warnings,
