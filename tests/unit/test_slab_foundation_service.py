@@ -43,3 +43,57 @@ def test_slab_foundation_input_validation_fails_for_zero_thickness():
             slab_thickness=0,
             reserve_percent=10,
         )
+
+
+def test_slab_foundation_input_validation_fails_for_negative_length():
+    with pytest.raises(ValidationError):
+        SlabFoundationInput(
+            length=-10,
+            width=8,
+            slab_thickness=0.15,
+            reserve_percent=10,
+        )
+
+
+def test_slab_foundation_input_validation_fails_for_high_reserve():
+    with pytest.raises(ValidationError):
+        SlabFoundationInput(
+            length=10,
+            width=8,
+            slab_thickness=0.15,
+            reserve_percent=150,
+        )
+
+
+def test_slab_foundation_v2_result_shape_and_assumptions():
+    data = SlabFoundationInput(
+        length=12,
+        width=10,
+        slab_thickness=0.15,
+        reserve_percent=10,
+    )
+
+    result = calculate_slab_foundation_v2(data)
+
+    assert result.calculation_type == "slab_foundation"
+    assert len(result.steps) == 3
+    assert {a.key for a in result.assumptions} >= {
+        "reserve_percent",
+        "slab_area_method",
+        "concrete_only",
+    }
+
+
+def test_slab_foundation_v2_warns_when_thin_and_no_reserve():
+    data = SlabFoundationInput(
+        length=12,
+        width=10,
+        slab_thickness=0.05,
+        reserve_percent=0,
+    )
+
+    result = calculate_slab_foundation_v2(data)
+
+    codes = {w.code for w in result.warnings}
+    assert "thin_slab_thickness" in codes
+    assert "no_reserve" in codes
