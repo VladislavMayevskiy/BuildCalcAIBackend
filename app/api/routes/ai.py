@@ -5,8 +5,10 @@ from app import oauth2
 from app.database import get_db
 from app.models.ai_chat import AIChat
 from app.models.ai_request_log import AIRequestLog
+from app.schemas.ai import AIParsedCalculationRequest, AIParseRequest
 from app.models.calculation_history import Calculation
 from app.models.users import Users
+from app.services.openai_service import generate_ai_parsed_request
 from app.schemas.ai import (
     AIChatResponse,
     AIExplanationResponse,
@@ -178,3 +180,10 @@ def ai_chat(
 
     return {"response": response}
 
+
+@router.post("/parse-calculation-request", response_model=AIParsedCalculationRequest)
+def parse_calculation_request(
+    message: AIParseRequest,
+):
+    parsed_request = generate_ai_parsed_request(message.message)
+    return parsed_request
