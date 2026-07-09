@@ -47,6 +47,6 @@ class AIParseRequest(BaseModel):
     message: str
 
 class AIParsedCalculationRequest(BaseModel):
-    intent: Literal["foundation_slab", "unknown"]
+    intent: Literal["foundation_slab" ,"foundation_strip" ,"unknown"]
     parameters: list[AIParsedParameter]
     missing_fields: list[str]
