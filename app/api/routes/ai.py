@@ -5,8 +5,11 @@ from app import oauth2
 from app.database import get_db
 from app.models.ai_chat import AIChat
 from app.models.ai_request_log import AIRequestLog
+from app.schemas.ai import AIParsedCalculationRequest, AIParseRequest
 from app.models.calculation_history import Calculation
 from app.models.users import Users
+from app.schemas.calculation_result import CalculationResult
+from app.services.openai_service import generate_ai_parsed_request
 from app.schemas.ai import (
     AIChatResponse,
     AIExplanationResponse,
@@ -16,6 +19,8 @@ from app.schemas.ai import (
 )
 from app.services.ai_prompt_service import build_calculation_explanation_prompt, build_ai_chat_prompt
 from app.services.openai_service import generate_ai_response
+from app.services.ai_calculation_service import ai_calculation_service
+
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -178,3 +183,36 @@ def ai_chat(
 
     return {"response": response}
 
+
+@router.post("/parse-calculation-request", response_model=AIParsedCalculationRequest)
+def parse_calculation_request(
+    message: AIParseRequest,
+):
+    parsed_request = generate_ai_parsed_request(message.message)
+    return parsed_request
+
+@router.post(
+    "/calculate-from-text",
+    response_model=CalculationResult,
+)
+def calculate_from_text(
+    request: AIParseRequest,
+) -> CalculationResult:
+    try:
+        parsed_request = generate_ai_parsed_request(request.message)
+
+        calculation_result = ai_calculation_service(parsed_request)
+
+        return calculation_result
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    except RuntimeError as error:
+        raise HTTPException(
+            status_code=502,
+            detail=str(error),
+        ) from error

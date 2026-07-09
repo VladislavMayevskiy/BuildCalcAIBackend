@@ -1,8 +1,6 @@
 from datetime import datetime
-from typing import Optional
-
-from pydantic import BaseModel, ConfigDict
-
+from typing import Literal, Optional, Union
+from pydantic import BaseModel, ConfigDict, Field
 
 class AIExplanationResponse(BaseModel):
     calculation_id: int
@@ -38,3 +36,17 @@ class AIRequest(BaseModel):
 
 class AIResponse(BaseModel):
     response: str
+
+
+class AIParsedParameter(BaseModel):
+    name: str
+    value: Optional[Union[float, str, bool]]
+    unit: Optional[str]
+
+class AIParseRequest(BaseModel):
+    message: str
+
+class AIParsedCalculationRequest(BaseModel):
+    intent: Literal["foundation_slab" ,"foundation_strip" ,"unknown"]
+    parameters: list[AIParsedParameter]
+    missing_fields: list[str]
